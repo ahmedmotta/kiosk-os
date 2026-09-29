@@ -79,7 +79,7 @@ apt-get update
 apt-get install -y --no-install-recommends \
   $BASE_PKGS dkms broadcom-sta-dkms \
   network-manager wpasupplicant iw \
-  cage foot sudo dbus-user-session alsa-utils \
+  cage xwayland foot sudo dbus-user-session alsa-utils \
   plymouth plymouth-themes \
   nodejs npm ca-certificates curl
 
