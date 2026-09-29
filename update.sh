@@ -18,7 +18,7 @@ die() { printf '\n\033[1;31m%s\033[0m\n' "$*" >&2; exit 1; }
 say "Updating the interface"
 NEED_NPM=0
 cmp -s "$SRC/app/package.json" "$APP_DIR/app/package.json" || NEED_NPM=1
-for f in main.js preload.js store.js system.js cli.js package.json; do
+for f in main.js preload.js store.js system.js cli.js photos.js package.json; do
   install -m 644 "$SRC/app/$f" "$APP_DIR/app/$f"
 done
 rm -rf "$APP_DIR/app/ui"

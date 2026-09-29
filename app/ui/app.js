@@ -60,6 +60,16 @@
     return el;
   }
   const clear = (el) => { el.replaceChildren(); return el; };
+  // A photo (data: URL from the kiosk) or the gradient + initials.
+  function paintAvatar(el, u) {
+    if (u.photo && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u.photo)) {
+      el.textContent = '';
+      el.style.background = `center / cover no-repeat url("${u.photo}")`;
+    } else {
+      el.textContent = initials(u.name);
+      el.style.background = grad(u.color);
+    }
+  }
   const initials = (n) => String(n || '?').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const cleanErr = (e) => String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
 
@@ -139,7 +149,7 @@
     for (const u of S.users) {
       const sel = u.id === selectedUser;
       const col = h('div', { class: 'user' + (sel ? ' selected' : '') },
-        h('button', { class: 'avatar', style: `background:${grad(u.color)}`, 'aria-label': `Sign in as ${u.name}`, onclick: () => pickUser(u) }, initials(u.name)),
+        (() => { const b = h('button', { class: 'avatar', 'aria-label': `Sign in as ${u.name}`, onclick: () => pickUser(u) }); paintAvatar(b, u); return b; })(),
         h('span', { class: 'user-name' }, u.name));
       if (sel && u.hasPassword) {
         const input = h('input', { type: 'password', placeholder: 'Password', autocomplete: 'off', 'aria-label': `Password for ${u.name}` });
@@ -187,8 +197,7 @@
       }));
     }
     const ub = $('#userBtn');
-    ub.textContent = initials(S.user.name);
-    ub.style.background = grad(S.user.color);
+    paintAvatar(ub, S.user);
     ub.title = `${S.user.name} — sign out`;
     ub.setAttribute('aria-label', `Sign out ${S.user.name}`);
   }
@@ -200,8 +209,7 @@
   function renderNotch() {
     $('#notchAppIcon').style.background = grad(S.activeApp.color);
     $('#notchAppName').textContent = S.activeApp.name;
-    $('#notchUser').textContent = initials(S.user.name);
-    $('#notchUser').style.background = grad(S.user.color);
+    paintAvatar($('#notchUser'), S.user);
   }
   $('#notchHome').addEventListener('click', () => K.home());
 

@@ -7,6 +7,7 @@ const { app, BrowserWindow, WebContentsView, ipcMain, session, Menu } = require(
 const path = require('path');
 const store = require('./store');
 const sys = require('./system');
+const photos = require('./photos');
 
 if (!app.requestSingleInstanceLock()) app.exit(0);
 
@@ -110,12 +111,15 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'ui', 'index.html'));
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  photos.start(() => push());
+});
 app.on('window-all-closed', () => app.quit());
 
 // ---------- state sent to the shell (never contains links or tokens) ----------
 function publicUsers() {
-  return store.users().map((u) => ({ id: u.id, name: u.name, color: u.color, hasPassword: !!u.passwordHash }));
+  return store.users().map((u) => ({ id: u.id, name: u.name, color: u.color, hasPassword: !!u.passwordHash, photo: photos.get(u.id) }));
 }
 function appsFor(u) {
   if (!u) return [];
@@ -129,7 +133,7 @@ function state() {
   return {
     deviceName: store.get().deviceName,
     users: publicUsers(),
-    user: u ? { id: u.id, name: u.name, color: u.color } : null,
+    user: u ? { id: u.id, name: u.name, color: u.color, photo: photos.get(u.id) } : null,
     apps,
     activeAppId,
     activeApp: apps.find((a) => a.id === activeAppId) || null,
@@ -352,6 +356,7 @@ handle('admin:saveUser', (inp) => {
   if (userId === u.id) closeAll();
   store.save();
   push();
+  photos.refresh(() => push());
   return adminData();
 }, true);
 
