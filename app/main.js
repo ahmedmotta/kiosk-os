@@ -51,6 +51,16 @@ function isBlockedKey(i) {
   return false;
 }
 
+// An app may move between its own host and that host's subdomains
+// (google.com -> www.google.com, example.com -> accounts.example.com), nothing else.
+function siteBase(host) { return String(host || '').replace(/^www\./, '').replace(/:\d+$/, ''); }
+function sameSite(url, allowedHost) {
+  if (!allowedHost) return false;
+  const h = siteBase(hostOf(url));
+  const base = siteBase(allowedHost);
+  return !!h && (h === base || h.endsWith('.' + base));
+}
+
 function lockContents(wc, allowedHost) {
   wc.on('before-input-event', (e, i) => {
     if (i.type !== 'keyDown') return;
@@ -68,11 +78,11 @@ function lockContents(wc, allowedHost) {
   });
   // Popups: same-site links open in place, everything else is dropped.
   wc.setWindowOpenHandler(({ url }) => {
-    if (allowedHost && hostOf(url) === allowedHost) wc.loadURL(url).catch(() => {});
+    if (sameSite(url, allowedHost)) wc.loadURL(url).catch(() => {});
     return { action: 'deny' };
   });
   wc.on('will-navigate', (e, url) => {
-    if (!allowedHost || hostOf(url) !== allowedHost) e.preventDefault();
+    if (!sameSite(url, allowedHost)) e.preventDefault();
   });
   wc.on('will-attach-webview', (e) => e.preventDefault());
 }
