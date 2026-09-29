@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
 #  Kiosk OS installer
-#  Target: fresh Debian 13 (trixie) or 12 (bookworm), MacBook Pro Retina 2012
+#  Target: Debian 12/13 or Ubuntu 22.04+ (server or desktop), MacBook Pro Retina 2012
 #  Run:    sudo bash install.sh
 # =====================================================================
 set -euo pipefail
@@ -18,13 +18,21 @@ die() { printf '\n\033[1;31m%s\033[0m\n' "$*" >&2; exit 1; }
 # ---------- checks ----------
 [ "$(id -u)" -eq 0 ] || die "Run as root:  sudo bash install.sh"
 . /etc/os-release
-case "${VERSION_CODENAME:-}" in
-  bookworm) LIBS="libasound2 libgtk-3-0 libatk-bridge2.0-0" ;;
-  trixie)   LIBS="libasound2t64 libgtk-3-0t64 libatk-bridge2.0-0t64" ;;
-  *) die "This needs Debian 13 (trixie) or 12 (bookworm). Found: ${PRETTY_NAME:-unknown}" ;;
+case "${ID:-}" in
+  debian)
+    case "${VERSION_CODENAME:-}" in
+      bookworm|trixie) ;;
+      *) die "Debian 12 or 13 is needed. Found: ${PRETTY_NAME:-unknown}" ;;
+    esac ;;
+  ubuntu)
+    case "${VERSION_ID:-}" in
+      22.04|24.04|24.10|25.04|25.10|26.04|26.10) ;;
+      *) echo "Warning: untested Ubuntu version ${VERSION_ID:-?} — trying anyway." ;;
+    esac ;;
+  *) die "Debian 12/13 or Ubuntu 22.04+ is needed. Found: ${PRETTY_NAME:-unknown}" ;;
 esac
 [ -f "$SRC/app/main.js" ] || die "Can't find app/ next to install.sh"
-getent hosts deb.debian.org >/dev/null 2>&1 || die "No internet. Connect Ethernet (Thunderbolt adapter) or USB tethering from a phone first."
+getent hosts github.com >/dev/null 2>&1 || die "No internet. Connect Ethernet or USB tethering from a phone first."
 
 # ---------- questions ----------
 echo
@@ -43,46 +51,71 @@ while :; do
 done
 
 # ---------- repositories ----------
-say "Enabling contrib / non-free (needed for the Broadcom Wi-Fi driver)"
-if [ -f /etc/apt/sources.list ]; then
-  sed -i -E '/^deb(-src)? /s/ main( .*)?$/ main contrib non-free non-free-firmware/' /etc/apt/sources.list
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+if [ "$ID" = "debian" ]; then
+  say "Enabling contrib / non-free (needed for the Broadcom Wi-Fi driver)"
+  if [ -f /etc/apt/sources.list ]; then
+    sed -i -E '/^deb(-src)? /s/ main( .*)?$/ main contrib non-free non-free-firmware/' /etc/apt/sources.list
+  fi
+  for f in /etc/apt/sources.list.d/*.sources; do
+    [ -f "$f" ] && sed -i -E 's/^Components: .*/Components: main contrib non-free non-free-firmware/' "$f"
+  done
+  BASE_PKGS="linux-headers-amd64 firmware-linux firmware-misc-nonfree"
+else
+  say "Enabling universe / restricted / multiverse"
+  if [ -f /etc/apt/sources.list ]; then
+    sed -i -E '/^deb(-src)? /s/ main( .*)?$/ main restricted universe multiverse/' /etc/apt/sources.list
+  fi
+  for f in /etc/apt/sources.list.d/*.sources; do
+    [ -f "$f" ] && sed -i -E 's/^Components: .*/Components: main restricted universe multiverse/' "$f"
+  done
+  BASE_PKGS="linux-headers-generic linux-firmware"
 fi
-for f in /etc/apt/sources.list.d/*.sources; do
-  [ -f "$f" ] && sed -i -E 's/^Components: .*/Components: main contrib non-free non-free-firmware/' "$f"
-done
 
 # ---------- packages ----------
 say "Installing packages (this takes a while)"
-export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
-  linux-headers-amd64 dkms broadcom-sta-dkms \
-  firmware-linux firmware-misc-nonfree \
+  $BASE_PKGS dkms broadcom-sta-dkms \
   network-manager wpasupplicant iw \
-  cage foot sudo polkitd dbus-user-session \
-  pipewire pipewire-pulse wireplumber alsa-utils \
+  cage foot sudo dbus-user-session alsa-utils \
   plymouth plymouth-themes \
   nodejs npm ca-certificates curl
 
-# Libraries Electron needs + fonts. Names differ a little between Debian 12 and 13,
-# so each one is tried on its own and a missing name is skipped instead of stopping the install.
-for pkg in "linux-headers-$(uname -r)" firmware-brcm80211 libgbm1 libnss3 libxss1 libxtst6 $LIBS libdrm2 libxkbcommon0 \
-           libsecret-1-0 libgl1-mesa-dri mesa-vulkan-drivers \
+# Libraries Electron needs + fonts. Names differ between Debian/Ubuntu versions (e.g. the
+# "t64" renames), so each one is tried on its own and a missing name is simply skipped.
+for pkg in "linux-headers-$(uname -r)" firmware-brcm80211 polkitd policykit-1 \
+           pipewire pipewire-pulse wireplumber \
+           libgbm1 libnss3 libxss1 libxtst6 libdrm2 libxkbcommon0 libsecret-1-0 \
+           libasound2t64 libasound2 libgtk-3-0t64 libgtk-3-0 libatk-bridge2.0-0t64 libatk-bridge2.0-0 \
+           libgl1-mesa-dri mesa-vulkan-drivers \
            fonts-noto-core fonts-noto-color-emoji fonts-hosny-amiri fonts-dejavu-core; do
-  apt-get install -y --no-install-recommends "$pkg" >/dev/null 2>&1 || echo "  (skipped $pkg — not in this Debian version)"
+  apt-get install -y --no-install-recommends "$pkg" >/dev/null 2>&1 || true
 done
 
 say "Loading the Wi-Fi driver"
 modprobe -r b44 b43 b43legacy ssb brcmsmac bcma 2>/dev/null || true
 modprobe wl 2>/dev/null || echo "(wl will load after reboot)"
 
+say "Handing networking to NetworkManager"
 systemctl enable NetworkManager
-# Let NetworkManager manage everything (ifupdown keeps only loopback)
-if [ -f /etc/network/interfaces ]; then
+# Debian: ifupdown keeps only loopback
+if [ -f /etc/network/interfaces ] && grep -qv '^\s*#' /etc/network/interfaces; then
   cp /etc/network/interfaces /etc/network/interfaces.bak
   printf 'auto lo\niface lo inet loopback\nsource /etc/network/interfaces.d/*\n' > /etc/network/interfaces
 fi
+# Ubuntu: netplan hands everything to NetworkManager
+if [ -d /etc/netplan ]; then
+  install -d /etc/netplan/backup
+  for f in /etc/netplan/*.yaml; do [ -f "$f" ] && mv "$f" /etc/netplan/backup/; done
+  printf 'network:\n  version: 2\n  renderer: NetworkManager\n' > /etc/netplan/01-kioskos.yaml
+  chmod 600 /etc/netplan/01-kioskos.yaml
+  systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
+fi
 sed -i 's/^managed=.*/managed=true/' /etc/NetworkManager/NetworkManager.conf 2>/dev/null || true
+# Ubuntu Desktop: no graphical login screen, the kiosk takes tty1 instead
+for dm in gdm3 gdm lightdm sddm; do systemctl disable "$dm" 2>/dev/null || true; done
 
 # ---------- accounts ----------
 say "Creating accounts"
@@ -184,6 +217,23 @@ polkit.addRule(function (action, subject) {
   if (power.indexOf(action.id) >= 0) return polkit.Result.YES;
 });
 EOF
+# Older polkit (Ubuntu 22.04) reads .pkla files instead of the JS rule above.
+install -d /etc/polkit-1/localauthority/50-local.d
+cat > /etc/polkit-1/localauthority/50-local.d/kioskos.pkla <<EOF
+[Kiosk Wi-Fi]
+Identity=unix-user:$KIOSK_USER
+Action=org.freedesktop.NetworkManager.*
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes
+
+[Kiosk power]
+Identity=unix-user:$KIOSK_USER
+Action=org.freedesktop.login1.power-off;org.freedesktop.login1.power-off-multiple-sessions;org.freedesktop.login1.reboot;org.freedesktop.login1.reboot-multiple-sessions
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes
+EOF
 
 # ---------- boot: silent + password-protected GRUB ----------
 say "Configuring a silent, protected boot"
@@ -209,7 +259,13 @@ fi
 # Boot screen: Innovation IT Hub logo, name and quote (plymouth/kioskos)
 install -d /usr/share/plymouth/themes/kioskos
 cp "$SRC"/plymouth/kioskos/* /usr/share/plymouth/themes/kioskos/
-plymouth-set-default-theme kioskos || plymouth-set-default-theme spinner || true
+if command -v plymouth-set-default-theme >/dev/null; then
+  plymouth-set-default-theme kioskos || true
+else
+  update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth \
+    /usr/share/plymouth/themes/kioskos/kioskos.plymouth 200
+  update-alternatives --set default.plymouth /usr/share/plymouth/themes/kioskos/kioskos.plymouth
+fi
 echo "FRAMEBUFFER=y" > /etc/initramfs-tools/conf.d/splash
 update-initramfs -u
 update-grub
