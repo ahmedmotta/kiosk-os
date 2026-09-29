@@ -218,7 +218,9 @@
   $('#wifiRescan').addEventListener('click', () => loadWifi());
   document.addEventListener('click', (e) => {
     const p = $('#wifiPanel');
-    if (!p.hidden && !p.contains(e.target)) closeWifi();
+    // composedPath() is captured at click time, so it still works when the click
+    // re-rendered the list and removed the clicked element from the page.
+    if (!p.hidden && !e.composedPath().includes(p)) closeWifi();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeWifi(); });
 

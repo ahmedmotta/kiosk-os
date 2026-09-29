@@ -44,10 +44,10 @@ reboot
 **تحديث الجهاز بعد كده** (من الـ Terminal في لوحة الأدمن):
 
 ```bash
-cd /opt/kiosk-os-src && sudo git pull && sudo bash install.sh
+cd /opt/kiosk-os-src && sudo git pull && sudo bash update.sh
 ```
 
-الأمر ده بيحدّث الواجهة بس. اليوزرز والـ apps والتوكنز مش بيتمسحوا.
+`update.sh` بيحدّث الواجهة وشاشة البوت من غير أي أسئلة، واليوزرز والـ apps والتوكنز مش بيتمسحوا.
 
 السكريبت هيسألك على:
 - **الاسم** اللي يظهر على الشاشة.

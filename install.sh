@@ -292,6 +292,8 @@ else
   update-alternatives --set default.plymouth /usr/share/plymouth/themes/kioskos/kioskos.plymouth
 fi
 echo "FRAMEBUFFER=y" > /etc/initramfs-tools/conf.d/splash
+# Start the Intel graphics driver early so the boot screen draws cleanly.
+grep -qx i915 /etc/initramfs-tools/modules 2>/dev/null || echo i915 >> /etc/initramfs-tools/modules
 update-initramfs -u
 update-grub
 
