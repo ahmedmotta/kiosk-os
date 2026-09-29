@@ -18,6 +18,21 @@ const TOTAL = 6236;
 const ORDER = [1, ...Array.from({ length: 113 }, (_, i) => 114 - i)];
 
 const pad3 = (n) => String(n).padStart(3, '0');
+const PAUSE_FILE = path.join(path.dirname(store.FILE), 'quran-audio.pause');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+let busy = () => false; // set by main.js: true while a child has a lesson open
+
+// Gentle on the connection: never while a child is using the kiosk, never on a
+// phone hotspot / metered connection, never when paused by Baba, and a short rest between files.
+function mayDownload() {
+  if (fs.existsSync(PAUSE_FILE)) return 'Paused by Baba';
+  if (busy()) return 'Waiting: a lesson is open';
+  try {
+    const out = require('child_process').execFileSync('nmcli', ['-t', '-f', 'GENERAL.METERED', 'dev', 'show'], { timeout: 5000 }).toString();
+    if (/METERED:yes/i.test(out)) return 'Waiting: phone hotspot / metered connection';
+  } catch { /* no nmcli: allow */ }
+  return null;
+}
 const fileOf = (s, a) => path.join(DIR, `${pad3(s)}${pad3(a)}.mp3`);
 let state = { saved: 0, running: false, note: '' };
 
@@ -72,6 +87,9 @@ async function downloadAll() {
       for (let a = 1; a <= AYAT[s - 1]; a++) {
         if (fs.existsSync(fileOf(s, a))) continue;
         if (freeBytes() < MIN_FREE) { state.note = 'Stopped: disk almost full'; return; }
+        const hold = mayDownload();
+        if (hold) { state.note = hold; return; }
+        await wait(1500);
         const src = source();
         if (!src) { state.note = 'Waiting for a child with a token'; return; }
         const ok = await fetchOne(src, s, a);
@@ -123,7 +141,7 @@ function start() {
   state.saved = count();
   serve();
   setTimeout(downloadAll, 60 * 1000);                  // let the screen settle first
-  setInterval(downloadAll, 30 * 60 * 1000);            // resume after outages
+  setInterval(downloadAll, 10 * 60 * 1000);            // resume later (after a lesson, outage or pause)
 }
 
-module.exports = { start, downloadAll, status: () => ({ ...state, saved: count(), total: TOTAL }) };
+module.exports = { setBusy: (fn) => { busy = fn; }, start, downloadAll, status: () => ({ ...state, saved: count(), total: TOTAL }) };

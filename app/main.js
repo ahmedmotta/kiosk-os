@@ -117,6 +117,7 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
   photos.start(() => push());
+  quranAudio.setBusy(() => !!activeAppId);
   quranAudio.start();
 });
 app.on('window-all-closed', () => app.quit());
