@@ -21,14 +21,33 @@
 
 ## 3) تشغيل السكريبت
 
-انقل فولدر `kiosk-os` على الجهاز (فلاشة، أو `scp`)، وبعدين:
+الـ repo **Private**، فمحتاج token للقراءة بس:
+
+1. على GitHub افتح **Settings → Developer settings → Fine-grained tokens → Generate new token**.
+2. في **Repository access** اختار `kiosk-os` بس.
+3. في **Permissions** اختار **Contents: Read-only**.
+4. انسخ الـ token.
+
+على الماك:
 
 ```bash
 su -              # أو sudo -i
-cd /path/to/kiosk-os
+apt install -y git
+git clone https://github.com/ahmedmotta/kiosk-os.git /opt/kiosk-os-src
+#   Username: ahmedmotta
+#   Password: الصق الـ token هنا
+cd /opt/kiosk-os-src
 bash install.sh
 reboot
 ```
+
+**تحديث الجهاز بعد كده** (من الـ Terminal في لوحة الأدمن):
+
+```bash
+cd /opt/kiosk-os-src && sudo git pull && sudo bash install.sh
+```
+
+الأمر ده بيحدّث الواجهة بس. اليوزرز والـ apps والتوكنز مش بيتمسحوا.
 
 السكريبت هيسألك على:
 - **الاسم** اللي يظهر على الشاشة.
@@ -99,7 +118,7 @@ reboot
   ```
 - **مشاكل في الجرافيكس** (شاشة سودة أو تقطيع): الجهاز فيه كارتين، Intel و NVIDIA. جرب تضيف `nouveau.modeset=0` لـ `GRUB_CMDLINE_LINUX_DEFAULT` في `/etc/default/grub`، وبعدين `sudo update-grub` وريستارت.
 - **عايز تعيد تشغيل الواجهة بس:** `sudo pkill -f electron` وهي هتقوم لوحدها تاني.
-- **تحديث كود الواجهة:** حط نسخة `kiosk-os` الجديدة وشغّل `install.sh` تاني. اليوزرز والـ apps مش هيتمسحوا.
+- **تحديث كود الواجهة:** `git pull` وبعدين `install.sh` تاني، زي ما هو مشروح في الخطوة 3.
 
 ## الملفات
 
