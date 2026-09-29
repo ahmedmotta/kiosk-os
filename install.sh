@@ -170,6 +170,7 @@ cat > "$APP_DIR/start.sh" <<'EOF'
 #!/bin/sh
 # Started by cage on tty1. Change KIOSK_SCALE to 1 if everything looks tiny/huge.
 export KIOSK_SCALE="${KIOSK_SCALE:-2}"
+export ELECTRON_ENABLE_LOGGING=1
 cd /opt/kioskos/app || exit 1
 exec ./node_modules/electron/dist/electron . --ozone-platform=wayland
 EOF
@@ -196,8 +197,12 @@ cat > "$KHOME/.bash_profile" <<'EOF'
 if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
   clear
   while true; do
-    cage -d -- /opt/kioskos/start.sh >"$HOME/kioskos.log" 2>&1
-    sleep 1
+    LOG="$HOME/kioskos.log"
+    [ -f "$LOG" ] && [ "$(stat -c %s "$LOG")" -gt 2000000 ] && mv "$LOG" "$LOG.old"
+    echo "=== start $(date) ===" >>"$LOG"
+    cage -d -D -- /opt/kioskos/start.sh >>"$LOG" 2>&1
+    echo "=== exit $? $(date) ===" >>"$LOG"
+    sleep 2
   done
 fi
 EOF

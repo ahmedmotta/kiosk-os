@@ -83,7 +83,7 @@ function createWindow() {
     fullscreen: true,
     kiosk: true,
     frame: false,
-    show: false,
+    show: true,
     backgroundColor: '#0b1020',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -95,7 +95,6 @@ function createWindow() {
     },
   });
   lockContents(win.webContents, null);
-  win.once('ready-to-show', () => win.show());
   win.on('resize', layout);
   win.webContents.on('render-process-gone', () => win.reload());
   win.loadFile(path.join(__dirname, 'ui', 'index.html'));
