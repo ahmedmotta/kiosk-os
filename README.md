@@ -1,6 +1,6 @@
 # Kiosk OS — دليل التثبيت
 
-نظام كيوسك مبني على Debian 12 للـ MacBook Pro Retina 2012.
+نظام كيوسك مبني على Debian 13 (وبيشتغل كمان على 12) للـ MacBook Pro Retina 2012.
 بيفتح على شاشة اليوزرز، وكل يوزر بيشوف الـ apps بتاعته بس. كل app عبارة عن لينك بيفتح فول سكرين، من غير ما الدومين يظهر.
 
 ---
@@ -12,7 +12,7 @@
 
 ## 2) تثبيت Debian
 
-1. نزّل `debian-12.x.x-amd64-netinst.iso` واعمله فلاشة بـ balenaEtcher أو Rufus.
+1. نزّل **netinst** بتاع Debian 13 من debian.org (`debian-13.x.x-amd64-netinst.iso`)، واعمله فلاشة بـ balenaEtcher أو Rufus.
 2. دوس `Option` وقت البوت واختار الفلاشة.
 3. في التثبيت:
    - امسح الديسك كله: Guided, use entire disk.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
 #  Kiosk OS installer
-#  Target: fresh Debian 12 (bookworm) minimal, MacBook Pro Retina 2012
+#  Target: fresh Debian 13 (trixie) or 12 (bookworm), MacBook Pro Retina 2012
 #  Run:    sudo bash install.sh
 # =====================================================================
 set -euo pipefail
@@ -18,7 +18,11 @@ die() { printf '\n\033[1;31m%s\033[0m\n' "$*" >&2; exit 1; }
 # ---------- checks ----------
 [ "$(id -u)" -eq 0 ] || die "Run as root:  sudo bash install.sh"
 . /etc/os-release
-[ "${VERSION_CODENAME:-}" = "bookworm" ] || die "This needs Debian 12 (bookworm). Found: ${PRETTY_NAME:-unknown}"
+case "${VERSION_CODENAME:-}" in
+  bookworm) LIBS="libasound2 libgtk-3-0 libatk-bridge2.0-0" ;;
+  trixie)   LIBS="libasound2t64 libgtk-3-0t64 libatk-bridge2.0-0t64" ;;
+  *) die "This needs Debian 13 (trixie) or 12 (bookworm). Found: ${PRETTY_NAME:-unknown}" ;;
+esac
 [ -f "$SRC/app/main.js" ] || die "Can't find app/ next to install.sh"
 getent hosts deb.debian.org >/dev/null 2>&1 || die "No internet. Connect Ethernet (Thunderbolt adapter) or USB tethering from a phone first."
 
@@ -52,16 +56,21 @@ say "Installing packages (this takes a while)"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
-  "linux-headers-$(uname -r)" linux-headers-amd64 dkms broadcom-sta-dkms \
-  firmware-linux firmware-misc-nonfree firmware-brcm80211 \
+  linux-headers-amd64 dkms broadcom-sta-dkms \
+  firmware-linux firmware-misc-nonfree \
   network-manager wpasupplicant iw \
   cage foot sudo polkitd dbus-user-session \
   pipewire pipewire-pulse wireplumber alsa-utils \
   plymouth plymouth-themes \
-  nodejs npm ca-certificates curl \
-  fonts-noto-core fonts-noto-color-emoji fonts-hosny-amiri fonts-dejavu-core \
-  libgbm1 libnss3 libasound2 libgtk-3-0 libxss1 libxtst6 libatk-bridge2.0-0 \
-  libdrm2 libxkbcommon0 libsecret-1-0 libgl1-mesa-dri mesa-vulkan-drivers
+  nodejs npm ca-certificates curl
+
+# Libraries Electron needs + fonts. Names differ a little between Debian 12 and 13,
+# so each one is tried on its own and a missing name is skipped instead of stopping the install.
+for pkg in "linux-headers-$(uname -r)" firmware-brcm80211 libgbm1 libnss3 libxss1 libxtst6 $LIBS libdrm2 libxkbcommon0 \
+           libsecret-1-0 libgl1-mesa-dri mesa-vulkan-drivers \
+           fonts-noto-core fonts-noto-color-emoji fonts-hosny-amiri fonts-dejavu-core; do
+  apt-get install -y --no-install-recommends "$pkg" >/dev/null 2>&1 || echo "  (skipped $pkg — not in this Debian version)"
+done
 
 say "Loading the Wi-Fi driver"
 modprobe -r b44 b43 b43legacy ssb brcmsmac bcma 2>/dev/null || true
@@ -100,6 +109,8 @@ SANDBOX="$APP_DIR/app/node_modules/electron/dist/chrome-sandbox"
 [ -f "$SANDBOX" ] || die "Electron download failed. Check the internet and run install.sh again."
 chown root:root "$SANDBOX"
 chmod 4755 "$SANDBOX"
+MISSING=$(ldd "$APP_DIR/app/node_modules/electron/dist/electron" 2>/dev/null | awk '/not found/{print $1}' | tr '\n' ' ')
+[ -z "$MISSING" ] || echo "WARNING: missing libraries for the interface: $MISSING  (send this line to Claude)"
 chown -R root:root "$APP_DIR"
 
 cat > "$APP_DIR/start.sh" <<'EOF'
