@@ -342,8 +342,9 @@ handle('admin:saveUser', (inp) => {
   const pw = String(inp.password ?? '');
   if (!inp.noPassword && pw && pw.length < 4) throw new Error('Password must be at least 4 characters');
   const existing = inp.id ? d.users.find((x) => x.id === inp.id) : null;
-  const tokenId = clean(inp.tokenId, 200);
-  const tokenSecret = String(inp.tokenSecret ?? '').trim().slice(0, 300);
+  const strip = (v) => String(v ?? '').replace(/^\s*cf-access-client-(id|secret)\s*:\s*/i, '').replace(/\s+/g, '');
+  const tokenId = strip(inp.tokenId).slice(0, 200);
+  const tokenSecret = strip(inp.tokenSecret).slice(0, 300);
   const secret = tokenSecret || (existing && existing.token && existing.token.secret) || '';
   if (tokenId && !secret) throw new Error('Add the Client Secret for this token');
 

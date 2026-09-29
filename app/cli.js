@@ -7,8 +7,10 @@ const store = require('./store');
 const name = String(process.env.KID_NAME || '').trim();
 const url = String(process.env.KID_URL || '').trim();
 const color = store.COLORS.includes(process.env.KID_COLOR) ? process.env.KID_COLOR : 'blue';
-const clientId = String(process.env.KID_CID || '').trim();
-const secret = String(process.env.KID_SECRET || '').trim();
+// Accept a pasted whole line like "CF-Access-Client-Id: abc.access" too.
+const clean = (v) => String(v || '').replace(/^\s*cf-access-client-(id|secret)\s*:\s*/i, '').replace(/\s+/g, '');
+const clientId = clean(process.env.KID_CID);
+const secret = clean(process.env.KID_SECRET);
 
 function fail(msg) { console.error('Error: ' + msg); process.exit(1); }
 if (!name) fail('name is missing');
