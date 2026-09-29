@@ -172,7 +172,7 @@ cat > "$APP_DIR/start.sh" <<'EOF'
 export KIOSK_SCALE="${KIOSK_SCALE:-2}"
 export ELECTRON_ENABLE_LOGGING=1
 cd /opt/kioskos/app || exit 1
-exec ./node_modules/electron/dist/electron . --ozone-platform=wayland
+exec ./node_modules/electron/dist/electron . --ozone-platform=x11
 EOF
 chmod 755 "$APP_DIR/start.sh"
 
@@ -200,7 +200,7 @@ if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
     LOG="$HOME/kioskos.log"
     [ -f "$LOG" ] && [ "$(stat -c %s "$LOG")" -gt 2000000 ] && mv "$LOG" "$LOG.old"
     echo "=== start $(date) ===" >>"$LOG"
-    cage -d -D -- /opt/kioskos/start.sh >>"$LOG" 2>&1
+    cage -d -- /opt/kioskos/start.sh >>"$LOG" 2>&1
     echo "=== exit $? $(date) ===" >>"$LOG"
     sleep 2
   done
