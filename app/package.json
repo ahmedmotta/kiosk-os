@@ -1,0 +1,11 @@
+{
+  "name": "kioskos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kiosk OS shell — taskbar, per-user apps, Wi-Fi, admin panel",
+  "main": "main.js",
+  "dependencies": {
+    "@fontsource/plus-jakarta-sans": "^5.1.0",
+    "electron": "^33.2.0"
+  }
+}

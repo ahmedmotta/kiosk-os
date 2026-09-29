@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kiosk</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bg" aria-hidden="true"></div>
+
+<header id="brand">
+  <span class="brand-mark" aria-hidden="true"></span>
+  <span id="deviceName"></span>
+</header>
+
+<!-- Login -->
+<main id="login" class="screen">
+  <div class="clock">
+    <div class="date" data-date></div>
+    <div class="time-big" data-time></div>
+  </div>
+  <div id="userList" class="user-list"></div>
+  <p id="loginErr" class="login-err" role="alert"></p>
+  <div class="login-actions">
+    <button class="round-action" data-wifi-toggle aria-label="Wi-Fi">
+      <span class="circle" data-wifi-icon data-size="20"></span>Wi‑Fi
+    </button>
+    <button class="round-action" data-power aria-label="Shut down">
+      <span class="circle danger" data-icon="power"></span>Shut down
+    </button>
+  </div>
+</main>
+
+<!-- Home (signed in) -->
+<main id="home" class="screen" hidden>
+  <div class="clock">
+    <div class="time-big" data-time></div>
+    <div class="date" data-date></div>
+  </div>
+  <nav id="dock" class="dock glass" aria-label="Taskbar">
+    <div id="dockApps" class="dock-apps"></div>
+    <div class="dock-sep"></div>
+    <button class="tile" data-wifi-toggle aria-label="Wi-Fi"><span data-wifi-icon data-size="22"></span></button>
+    <div class="tile text" data-battery></div>
+    <div class="tile text" data-time-short></div>
+    <button id="userBtn" class="avatar-btn" aria-label="Sign out"></button>
+    <button class="tile danger" data-power aria-label="Shut down"><span data-icon="power"></span></button>
+  </nav>
+</main>
+
+<!-- Notch (app open) -->
+<div id="notch" class="notch" hidden>
+  <button id="notchHome" class="notch-home" aria-label="Home"><span data-icon="home"></span></button>
+  <span id="notchAppIcon" class="notch-dot"></span>
+  <span id="notchAppName" class="notch-name"></span>
+  <span class="notch-sep"></span>
+  <span data-wifi-icon data-size="16"></span>
+  <span class="batt" data-battery></span>
+  <span data-time-short></span>
+  <span id="notchUser" class="notch-user"></span>
+</div>
+
+<!-- Wi-Fi -->
+<section id="wifiPanel" class="popover panel" aria-label="Wi-Fi networks" hidden>
+  <div class="popover-head">
+    <span class="popover-title">Wi‑Fi</span>
+    <button id="wifiRescan" class="icon-btn" aria-label="Search again"><span data-icon="refresh"></span></button>
+  </div>
+  <div id="wifiList" class="net-list"></div>
+</section>
+
+<div id="scrim" class="scrim" hidden></div>
+
+<!-- Confirm dialog -->
+<div id="dialog" class="dialog panel" role="dialog" aria-modal="true" hidden></div>
+
+<!-- Admin sign-in -->
+<form id="adminLogin" class="admin-login panel" role="dialog" aria-modal="true" aria-label="Admin sign in" hidden>
+  <div class="admin-login-head"><span class="shield" data-icon="shield"></span><h2>Admin</h2></div>
+  <label class="field"><span>Username</span><input id="adminUser" type="text" autocomplete="off" spellcheck="false" required></label>
+  <label class="field"><span>Password</span><input id="adminPass" type="password" autocomplete="off" required></label>
+  <p id="adminErr" class="err small" role="alert"></p>
+  <div class="row-end">
+    <button type="button" id="adminLoginCancel" class="btn ghost">Cancel</button>
+    <button type="submit" class="btn primary">Sign in</button>
+  </div>
+</form>
+
+<!-- Admin panel -->
+<section id="admin" class="admin panel" role="dialog" aria-modal="true" aria-label="Admin panel" hidden>
+  <div class="admin-head">
+    <span class="admin-title">Admin panel</span>
+    <div id="adminTabs" class="tabs" role="tablist">
+      <button role="tab" data-tab="users" aria-selected="true">Users</button>
+      <button role="tab" data-tab="apps" aria-selected="false">Apps</button>
+      <button role="tab" data-tab="system" aria-selected="false">System</button>
+    </div>
+    <button id="adminClose" class="icon-btn" aria-label="Close admin panel"><span data-icon="close"></span></button>
+  </div>
+  <div id="adminBody" class="admin-body"></div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>
