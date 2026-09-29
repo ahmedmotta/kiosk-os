@@ -137,6 +137,26 @@ cp -r "$SRC/app" "$APP_DIR/app.new"
 if [ -d "$APP_DIR/app/node_modules" ]; then mv "$APP_DIR/app/node_modules" "$APP_DIR/app.new/"; fi
 rm -rf "$APP_DIR/app"
 mv "$APP_DIR/app.new" "$APP_DIR/app"
+# Ubuntu 22.04 ships Node.js 12, which is too old for Electron's installer.
+# In that case fetch the official Node.js 22 build (checksum-verified) just for this step.
+NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)
+if [ "$NODE_MAJOR" -lt 18 ]; then
+  say "Node.js $NODE_MAJOR is too old — installing Node.js 22"
+  NODE_URL=https://nodejs.org/dist/latest-v22.x
+  TMPN=$(mktemp -d)
+  curl -fsSL "$NODE_URL/SHASUMS256.txt" -o "$TMPN/SHASUMS256.txt" || die "Can't reach nodejs.org"
+  TARBALL=$(awk '/linux-x64\.tar\.xz$/{print $2; exit}' "$TMPN/SHASUMS256.txt")
+  [ -n "$TARBALL" ] || die "Can't find the Node.js download"
+  curl -fsSL "$NODE_URL/$TARBALL" -o "$TMPN/$TARBALL" || die "Node.js download failed"
+  ( cd "$TMPN" && grep " $TARBALL\$" SHASUMS256.txt | sha256sum -c - ) || die "Node.js checksum mismatch"
+  rm -rf "$APP_DIR/node"
+  install -d "$APP_DIR/node"
+  tar -xJf "$TMPN/$TARBALL" -C "$APP_DIR/node" --strip-components=1
+  rm -rf "$TMPN"
+  export PATH="$APP_DIR/node/bin:$PATH"
+fi
+NODE_BIN=$(command -v node)
+echo "Using Node.js $("$NODE_BIN" -v)"
 ( cd "$APP_DIR/app" && npm install --omit=dev --no-audit --no-fund )
 SANDBOX="$APP_DIR/app/node_modules/electron/dist/chrome-sandbox"
 [ -f "$SANDBOX" ] || die "Electron download failed. Check the internet and run install.sh again."
@@ -158,7 +178,7 @@ chmod 755 "$APP_DIR/start.sh"
 install -d -o "$KIOSK_USER" -g "$KIOSK_USER" -m 700 "$DATA_DIR"
 sudo -u "$KIOSK_USER" env \
   KIOSK_ADMIN_USER="$ADMIN_USER" KIOSK_ADMIN_PASS="$P1" KIOSK_DEVICE_NAME="$DEVICE_NAME" \
-  node "$APP_DIR/app/store.js" init
+  "$NODE_BIN" "$APP_DIR/app/store.js" init
 
 # ---------- auto-login straight into the kiosk ----------
 say "Setting up auto-login"
