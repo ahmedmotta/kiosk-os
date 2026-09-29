@@ -113,6 +113,14 @@ if [ -d /etc/netplan ]; then
   chmod 600 /etc/netplan/01-kioskos.yaml
   systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
 fi
+# Always-working DNS: fixed resolvers in systemd-resolved (Wi-Fi DNS still used first).
+if systemctl list-unit-files systemd-resolved.service >/dev/null 2>&1; then
+  install -d /etc/systemd/resolved.conf.d
+  printf '[Resolve]\nDNS=1.1.1.1 8.8.8.8\nFallbackDNS=1.0.0.1 8.8.4.4\n' > /etc/systemd/resolved.conf.d/kioskos.conf
+  systemctl enable --now systemd-resolved >/dev/null 2>&1 || true
+  systemctl restart systemd-resolved || true
+  [ -e /run/systemd/resolve/stub-resolv.conf ] && ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+fi
 sed -i 's/^managed=.*/managed=true/' /etc/NetworkManager/NetworkManager.conf 2>/dev/null || true
 # Ubuntu Desktop: no graphical login screen, the kiosk takes tty1 instead
 for dm in gdm3 gdm lightdm sddm; do systemctl disable "$dm" 2>/dev/null || true; done

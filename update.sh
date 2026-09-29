@@ -48,6 +48,14 @@ if [ "$REBUILD" = 1 ]; then
   update-initramfs -u
 fi
 
+# Always-working DNS: fixed resolvers in systemd-resolved (Wi-Fi DNS still used first).
+if systemctl list-unit-files systemd-resolved.service >/dev/null 2>&1; then
+  install -d /etc/systemd/resolved.conf.d
+  printf '[Resolve]\nDNS=1.1.1.1 8.8.8.8\nFallbackDNS=1.0.0.1 8.8.4.4\n' > /etc/systemd/resolved.conf.d/kioskos.conf
+  systemctl enable --now systemd-resolved >/dev/null 2>&1 || true
+  systemctl restart systemd-resolved || true
+  [ -e /run/systemd/resolve/stub-resolv.conf ] && ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+fi
 # ---------- restart the interface ----------
 say "Restarting the interface"
 systemctl restart getty@tty1
