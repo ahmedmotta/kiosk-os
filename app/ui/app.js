@@ -559,6 +559,7 @@
           if (await confirmBox('Restart?', 'The computer will restart now.', 'Restart', true)) K.reboot();
         }),
         sysBtn('Sign out of admin', 'logout', closeAdmin)),
+      h('p', { class: 'help' }, A.quranAudio ? `Quran audio saved on this computer: ${A.quranAudio.saved} / ${A.quranAudio.total} ayat${A.quranAudio.running ? ' · downloading…' : A.quranAudio.note ? ' · ' + A.quranAudio.note : ''}` : ''),
       h('p', { class: 'help' }, 'Terminal and System update ask for the Linux admin password (user “kioskadmin”, set during install). Close the terminal window to come back here.'));
 
     const oldPw = h('input', { type: 'password', autocomplete: 'off', required: true });

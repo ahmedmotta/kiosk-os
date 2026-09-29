@@ -8,6 +8,7 @@ const path = require('path');
 const store = require('./store');
 const sys = require('./system');
 const photos = require('./photos');
+const quranAudio = require('./audio');
 
 if (!app.requestSingleInstanceLock()) app.exit(0);
 
@@ -15,6 +16,8 @@ app.commandLine.appendSwitch('force-device-scale-factor', process.env.KIOSK_SCAL
 app.commandLine.appendSwitch('disable-pinch');
 app.commandLine.appendSwitch('overscroll-history-navigation', '0');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Lessons may load Quran audio from this laptop (http://127.0.0.1:47800).
+app.commandLine.appendSwitch('disable-features', 'PrivateNetworkAccessSendPreflights,PrivateNetworkAccessRespectPreflightResults,BlockInsecurePrivateNetworkRequests,LocalNetworkAccessChecks');
 Menu.setApplicationMenu(null);
 
 const INSET = { top: 46, side: 14, bottom: 14 };
@@ -114,6 +117,7 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
   photos.start(() => push());
+  quranAudio.start();
 });
 app.on('window-all-closed', () => app.quit());
 
@@ -150,6 +154,8 @@ function userSession(u) {
   if (!configuredSessions.has(partition)) {
     configuredSessions.add(partition);
     const uid = u.id;
+    // Tells the lesson site it runs on the kiosk, so it plays Quran audio from this laptop.
+    ses.setUserAgent(`${ses.getUserAgent()} KioskOS/1`);
     ses.setPermissionRequestHandler((_wc, perm, cb) => cb(['media', 'fullscreen', 'clipboard-sanitized-write'].includes(perm)));
     ses.on('will-download', (e) => e.preventDefault());
     ses.webRequest.onBeforeSendHeaders((d, cb) => {
@@ -214,6 +220,11 @@ function openApp(id) {
     const wc = v.webContents;
     const url = a.url;
     lockContents(wc, hostOf(url));
+    wc.on('console-message', (_e, level, message, line, sourceId) => {
+      if (level >= 2) console.error(`[app ${a.name}] ${message} (${sourceId}:${line})`);
+    });
+    wc.on('did-fail-load', (_e, code, desc, failedUrl, isMain) => { if (isMain) console.error(`[app ${a.name}] load failed ${code} ${desc} ${failedUrl}`); });
+    wc.on('did-navigate', (_e, navUrl, status) => console.error(`[app ${a.name}] ${status} ${navUrl}`));
     wc.on('did-fail-load', (_e, code, _desc, _u, isMain) => {
       if (!isMain || code === -3) return;
       wc.loadFile(OFFLINE).catch(() => {});
@@ -254,6 +265,7 @@ function adminData() {
   return {
     deviceName: d.deviceName,
     adminUser: d.admin.user,
+    quranAudio: quranAudio.status(),
     apps: d.apps.map((a) => ({ ...a })),
     users: d.users.map((u) => ({
       id: u.id,
