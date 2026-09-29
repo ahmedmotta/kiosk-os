@@ -26,8 +26,8 @@ getent hosts deb.debian.org >/dev/null 2>&1 || die "No internet. Connect Etherne
 echo
 echo "Kiosk OS setup"
 echo "--------------"
-read -rp "Name shown on screen [Kiosk]: " DEVICE_NAME
-DEVICE_NAME=${DEVICE_NAME:-Kiosk}
+read -rp "Name shown on screen [Innovation IT Hub]: " DEVICE_NAME
+DEVICE_NAME=${DEVICE_NAME:-Innovation IT Hub}
 read -rp "Admin panel username [admin]: " ADMIN_USER
 ADMIN_USER=${ADMIN_USER:-admin}
 while :; do
@@ -37,7 +37,6 @@ while :; do
   if [ ${#P1} -lt 8 ]; then echo "Too short."; continue; fi
   break
 done
-read -rp "Logo PNG for the boot screen (full path, Enter to skip): " LOGO
 
 # ---------- repositories ----------
 say "Enabling contrib / non-free (needed for the Broadcom Wi-Fi driver)"
@@ -196,11 +195,11 @@ EOF
   sed -i 's/^CLASS="--class gnu-linux --class gnu --class os"$/CLASS="--class gnu-linux --class gnu --class os --unrestricted"/' /etc/grub.d/10_linux
 fi
 
-# Boot logo
-if [ -n "${LOGO:-}" ] && [ -f "$LOGO" ]; then
-  cp "$LOGO" /usr/share/plymouth/themes/spinner/watermark.png
-fi
-plymouth-set-default-theme spinner || true
+# Boot screen: Innovation IT Hub logo, name and quote (plymouth/kioskos)
+install -d /usr/share/plymouth/themes/kioskos
+cp "$SRC"/plymouth/kioskos/* /usr/share/plymouth/themes/kioskos/
+plymouth-set-default-theme kioskos || plymouth-set-default-theme spinner || true
+echo "FRAMEBUFFER=y" > /etc/initramfs-tools/conf.d/splash
 update-initramfs -u
 update-grub
 

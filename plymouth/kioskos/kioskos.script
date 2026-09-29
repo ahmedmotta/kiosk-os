@@ -1,0 +1,43 @@
+# Kiosk OS boot screen: white background, logo + text, three pulsing orange dots.
+
+Window.SetBackgroundTopColor(1.0, 1.0, 1.0);
+Window.SetBackgroundBottomColor(0.965, 0.965, 0.98);
+
+sw = Window.GetWidth();
+sh = Window.GetHeight();
+
+splash = Image("splash.png");
+scale = Math.Min(1.0, (sw * 0.5) / splash.GetWidth());
+scale = Math.Min(scale, (sh * 0.62) / splash.GetHeight());
+img = splash.Scale(splash.GetWidth() * scale, splash.GetHeight() * scale);
+
+logo = Sprite(img);
+logo.SetX(Math.Int(sw / 2 - img.GetWidth() / 2));
+logo.SetY(Math.Int(sh / 2 - img.GetHeight() / 2 - sh * 0.04));
+logo.SetZ(10);
+
+size = Math.Int(Math.Max(10, sh * 0.009));
+dot = Image("dot.png").Scale(size, size);
+gap = size * 2;
+startx = sw / 2 - (size * 3 + (gap - size) * 2) / 2;
+doty = Math.Int(sh * 0.86);
+
+for (i = 0; i < 3; i++) {
+  dots[i] = Sprite(dot);
+  dots[i].SetX(Math.Int(startx + i * gap));
+  dots[i].SetY(doty);
+  dots[i].SetZ(10);
+}
+
+tick = 0;
+fun refresh_callback () {
+  tick++;
+  for (i = 0; i < 3; i++) {
+    dots[i].SetOpacity(0.2 + 0.8 * Math.Abs(Math.Sin(tick / 14 - i * 0.8)));
+  }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# Hide boot messages and password prompts visuals (none expected on this system).
+fun message_callback (text) { }
+Plymouth.SetMessageFunction(message_callback);

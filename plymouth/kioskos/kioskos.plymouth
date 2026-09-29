@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Kiosk OS
+Description=Innovation IT Hub boot screen
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/kioskos
+ScriptFile=/usr/share/plymouth/themes/kioskos/kioskos.script
